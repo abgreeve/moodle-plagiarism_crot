@@ -46,16 +46,24 @@ class plagiarism_plugin_crot extends plagiarism_plugin {
         global $DB, $CFG;
         $cmid = $linkarray['cmid'];
         $userid = $linkarray['userid'];
-        $file = $linkarray['file'];
+          $file = null;
+        if (isset($linkarray['file'])) {
+          $file = $linkarray['file'];
+        }
         $course = $linkarray['course'];
 //sw 08/27
-        $cid = $course->id;
-        if (empty($cid)) { $cid = $course;}
+        if (is_object($course)) {
+          $cid = $course->id;
+        } else {
+          $cid = $course;
+        }
+
 // end sw 08/27
 //        if (!empty($plagiarismsettings['crot_use'])) { //sw 4-21
  //           if (isset($data->crot_use)) { //sw 4-21
 
         //add link/information about this file to $output
+        $output = '';
         if (!empty($file)){ //sw
             if (!$plagiarism_crot_files_rec = $DB->get_record("plagiarism_crot_files", array("file_id"=>$file->get_id()))) {
                 $output .= '';// if there is no record in plagiarism_crot_files about this file then nothing to show
@@ -146,7 +154,7 @@ class plagiarism_plugin_crot extends plagiarism_plugin {
      * @param object $mform  - Moodle form
      * @param object $context - current context
      */
-    public function get_form_elements_module($mform, $context) {
+    public function get_form_elements_module($mform, $context, $modulename = '') {
         global $DB;
         $plagiarismsettings = (array)get_config('plagiarism');
         if (!empty($plagiarismsettings['crot_use'])) {
@@ -184,13 +192,15 @@ class plagiarism_plugin_crot extends plagiarism_plugin {
      */
     public function print_disclosure($cmid) {
          global $DB, $OUTPUT;
+         return;
          // check if this cmid has plagiarism enabled
-         $select = 'cm = ? AND '.$DB->sql_compare_text('name').' = "crot_use"';
-         if (! $crot_use = $DB->get_record_select('plagiarism_crot_config', $select, array($cmid))) {
-            return;
-         } else if ($crot_use->value == 0) {
-            return;
-         }
+         // Why oh why is this field called name? Needs to be fixed.
+         // $select = 'cm = ? AND '. $DB->sql_compare_text('name').' = "crot_use"';
+         // if (! $crot_use = $DB->get_record_select('plagiarism_crot_config', $select, array($cmid))) {
+         //    return;
+         // } else if ($crot_use->value == 0) {
+         //    return;
+         // }
         $plagiarismsettings = (array)get_config('plagiarism');
         echo $OUTPUT->box_start('generalbox boxaligncenter', 'intro');
         $formatoptions = new stdClass;
@@ -321,7 +331,7 @@ function crot_event_content_uploaded($eventdata) {
     global $DB;
     
     if ($eventdata->modulename == "assign") {
-      $context = get_context_instance(CONTEXT_COURSE, $eventdata->courseid);
+      $context = context_course::instance($eventdata->courseid);
       $filename = "crot_" . $eventdata->courseid . "_" . $eventdata->cmid. "_" . $eventdata->userid . "_" .time().".txt";
       $filepath = "/"; // has to start and end with /, rule of the Moodle file storage api
       print_r($eventdata);
